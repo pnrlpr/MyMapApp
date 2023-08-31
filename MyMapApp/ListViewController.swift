@@ -13,6 +13,8 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     @IBOutlet weak var tableView: UITableView!
     var titleDizisi = [String]()
     var idDizisi = [UUID]()
+    var secilenLokasyonTitle = ""
+    var secilenLokasyonId : UUID?
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -73,6 +75,7 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
     
     
     @objc func artiButonuTiklandı (){
+        secilenLokasyonTitle = ""
         performSegue(withIdentifier: "toMapsVC", sender: nil)
     }
     
@@ -85,6 +88,22 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         let cell = UITableViewCell()
         cell.textLabel?.text = titleDizisi[indexPath.row]
         return cell
+    }
+    
+    //tableView'da herhangi bir row'a tıklanınca ne olacak?
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        secilenLokasyonTitle = titleDizisi [indexPath.row]
+        secilenLokasyonId = idDizisi[indexPath.row]
+        performSegue(withIdentifier: "toMapsVC", sender: nil)
+    }
+    
+    //Diğer VC'ye veri aktarımı:
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == "toMapsVC" {
+            let destinationVC = segue.destination as! MapsViewController
+            destinationVC.secilenTitle = secilenLokasyonTitle
+            destinationVC.secilenId = secilenLokasyonId
+        }
     }
   
 }

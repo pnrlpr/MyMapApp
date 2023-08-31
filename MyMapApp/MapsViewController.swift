@@ -16,13 +16,18 @@ class MapsViewController: UIViewController, MKMapViewDelegate, CLLocationManager
     @IBOutlet weak var baslikTextField: UITextField!
     @IBOutlet weak var aciklamaTextField: UITextField!
     
-    var secilenIsim = ""
+    var secilenTitle = ""
     var secilenId : UUID?
     
     
     var locationManager = CLLocationManager()
     var secilenLatitude = Double()
     var secilenLongitude = Double()
+    
+    var annotationTitle = ""
+    var annotationSubtitle = ""
+    var annotationLatitude = Double()
+    var annotationLongitude = Double()
     
     
     override func viewDidLoad() {
@@ -44,9 +49,69 @@ class MapsViewController: UIViewController, MKMapViewDelegate, CLLocationManager
         mapView.addGestureRecognizer(gestureRecognizer)
         
         //seçilen isim boş değil ise;
-        if secilenIsim != "" {
+        if secilenTitle != "" {
             //CoreData'dan verileri çek
             
+            if let uuidString = secilenId?.uuidString {
+                
+                let appDelegate = UIApplication.shared.delegate as! AppDelegate
+                let context = appDelegate.persistentContainer.viewContext
+                
+                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: "Location")
+                //Filtreleme
+                fetchRequest.predicate = NSPredicate(format: "id = %@", uuidString)
+                fetchRequest.returnsObjectsAsFaults = false
+                
+                do {
+                    //Bu bize bir any tipinde dizi verir
+                    let sonuclar = try context.fetch(fetchRequest)
+                    
+                    if sonuclar.count>0 {
+                        for sonuc in sonuclar as! [NSManagedObject] {
+                            
+                            //İlk önce bütün if'leri ayrı ayrı birbirinden bağımsız yazmıştık. O şekilde kalırsa başlık, açıklama, enlem ve boylamdan herhangi biri ya da birkaçı eksik olsa da çalışır
+                            //Fakat alttaki gibi iç içe if'ler şekinde yaparsak bütün parametrelerin olması zorunlu olur.
+                            if let title = sonuc.value(forKey: "title") as? String {
+                                annotationTitle = title
+                                
+                                if let subtitle = sonuc.value(forKey: "subtitle") as? String {
+                                    annotationSubtitle = subtitle
+                                    
+                                    if let latitude = sonuc.value(forKey: "latitude") as? Double {
+                                        annotationLatitude = latitude
+                                        
+                                        if let longitude = sonuc.value(forKey: "longitude") as? Double {
+                                            annotationLongitude = longitude
+                                            
+                                            //Annotation kodu (pin gösterme kodu) en içteki if'in içinde yazıldı
+                                            let annotation = MKPointAnnotation()
+                                            annotation.title = annotationTitle
+                                            annotation.subtitle = annotationSubtitle
+                                            
+                                            let coordinate = CLLocationCoordinate2D(latitude: annotationLatitude, longitude: annotationLongitude)
+                                            annotation.coordinate = coordinate
+                                            
+                                            mapView.addAnnotation(annotation)
+                                            baslikTextField.text = annotationTitle
+                                            aciklamaTextField.text = annotationSubtitle
+                                            
+                                            
+                                            locationManager.stopUpdatingLocation()
+                                            
+                                            let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+                                            let region = MKCoordinateRegion(center: coordinate, span: span)
+                                            mapView.setRegion(region, animated: true)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                } catch {
+                    print ("Hata")
+                }
+            }
             
         } else {
             //yeni veri eklenecek
@@ -85,15 +150,16 @@ class MapsViewController: UIViewController, MKMapViewDelegate, CLLocationManager
        // print(locations[0].coordinate.latitude)
        // print(locations[0].coordinate.longitude)
         
+        if secilenTitle == "" {
+            //LOKASYON HER GÜNCELLENDİĞİNDE HARİTA GÖRÜNÜMÜNÜ GÜNCELLEME
+            // lokasyon belirleme
+            let location = CLLocationCoordinate2D(latitude: locations[0].coordinate.latitude, longitude: locations[0].coordinate.longitude)
         
-        //LOKASYON HER GÜNCELLENDİĞİNDE HARİTA GÖRÜNÜMÜNÜ GÜNCELLEME
-        // lokasyon belirleme
-        let location = CLLocationCoordinate2D(latitude: locations[0].coordinate.latitude, longitude: locations[0].coordinate.longitude)
-        
-        //Ekrandaki haritayı konuma göre değiştirme:
-        let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-        let region = MKCoordinateRegion(center: location, span: span)
-        mapView.setRegion(region, animated: true)
+            //Ekrandaki haritayı konuma göre değiştirme:
+            let span = MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            let region = MKCoordinateRegion(center: location, span: span)
+            mapView.setRegion(region, animated: true)
+        }
     }
 
     @IBAction func kaydetButton(_ sender: Any) {
