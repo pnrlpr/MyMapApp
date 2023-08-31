@@ -27,7 +27,11 @@ class ListViewController: UIViewController, UITableViewDelegate, UITableViewData
         veriAl()
     }
     
-    func veriAl (){
+    override func viewWillAppear(_ animated: Bool) {
+        NotificationCenter.default.addObserver(self, selector: #selector(veriAl), name: NSNotification.Name("yeniYerOlusturuldu"), object: nil)
+    }
+    
+    @objc func veriAl (){
         let appDelegate = UIApplication.shared.delegate as! AppDelegate
         let context = appDelegate.persistentContainer.viewContext
         

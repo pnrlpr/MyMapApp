@@ -119,6 +119,64 @@ class MapsViewController: UIViewController, MKMapViewDelegate, CLLocationManager
         
     }
     
+    //Harita üzerinde navigasyon oluşturmak için / yol tarifi
+    func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+        if annotation is MKUserLocation {
+            return nil
+        }
+        
+        let reuseId = "myAnnotation"
+        var pinView = mapView.dequeueReusableAnnotationView(withIdentifier: reuseId)
+        
+        if pinView == nil {
+            
+            pinView = MKPinAnnotationView(annotation: annotation, reuseIdentifier: reuseId)
+            pinView?.canShowCallout = true
+            pinView?.tintColor = .red
+            
+            //Pin'e tıklayınca yanda çıkan "i" butonu
+            let button = UIButton(type: .detailDisclosure)
+            pinView?.rightCalloutAccessoryView = button
+            
+        } else {
+            pinView?.annotation = annotation
+        }
+        
+        return pinView
+    }
+    
+    
+    //Pin'in yanındaki "i" butonuna tıklayınca yol tarifi almak:
+    func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, calloutAccessoryControlTapped control: UIControl) {
+        if secilenTitle != "" {
+            
+            let requestLocation = CLLocation(latitude: annotationLatitude, longitude: annotationLongitude)
+            CLGeocoder().reverseGeocodeLocation(requestLocation) {(placeMarkDizisi, hata) in
+                
+                
+                //if let kullanarak placeMarkDizisi'ni opsiyonel olmaktan çıkarıyoruz. Bunu yapmayınca hata veriyor.
+                if let placemarks = placeMarkDizisi {
+                    if placemarks.count > 0 {
+                        
+                        let yeniPlacemark = MKPlacemark(placemark: placemarks[0])
+                        
+                        //Buraya kadarki bütün işlemler aşağıdaki yeniPlaceMark'ı alabilmek içindi. :)
+                        let item = MKMapItem(placemark: yeniPlacemark)
+                        item.name = self.annotationTitle
+                        
+                        //Haritada nav ilk açıldığında araba ile seçeneği açılır
+                        //Kullanıcı sonradan değiştirebilir
+                        let launchOptions = [MKLaunchOptionsDirectionsModeKey : MKLaunchOptionsDirectionsModeDriving]
+                        
+                        item.openInMaps(launchOptions: launchOptions)
+                    }
+                }
+               
+            }
+        }
+    }
+    
+    
     //gestureRecognizer için objc func. Parametre olarak gestureRecognizer girdik çünkü gestureRecognizer'a viewDidLoad dışından, konumSec func içerisinden de ulaşabilmek istiyoruz.
     @objc func konumSec (gestureRecognizer : UILongPressGestureRecognizer){
         
@@ -181,6 +239,12 @@ class MapsViewController: UIViewController, MKMapViewDelegate, CLLocationManager
         } catch {
             print("Hata var")
         }
+        
+        //Veriler kaydedildikten sonraki işlemler:
+        NotificationCenter.default.post(name: NSNotification.Name("yeniYerOlusturuldu"), object: nil)
+        navigationController?.popViewController(animated: true)
+        
+        
         
     }
     
